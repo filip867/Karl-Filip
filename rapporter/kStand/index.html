@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hostini Report Builder</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800;900&display=swap" />
+  </head>
+  <body>
+    <div id="boot-status" style="padding:20px;font-family:Manrope, sans-serif;color:#1a3044;">
+      Loading report builder…
+    </div>
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script>
+      (function () {
+        function setStatus(text) {
+          var el = document.getElementById("boot-status");
+          if (el) el.textContent = text;
+        }
+
+        function loadScript(src, onload, onerror) {
+          var s = document.createElement("script");
+          s.src = src;
+          s.onload = onload;
+          s.onerror = onerror;
+          document.head.appendChild(s);
+        }
+
+        function loadMain() {
+          setStatus("Loading app…");
+          fetch("main.js")
+            .then(function (res) {
+              return res.text();
+            })
+            .then(function (code) {
+              var transformed = Babel.transform(code, { presets: ["react"] }).code;
+              new Function(transformed)();
+              setStatus("App loaded.");
+              setTimeout(function () {
+                var el = document.getElementById("boot-status");
+                if (el) el.style.display = "none";
+              }, 800);
+            })
+            .catch(function (err) {
+              setStatus("Failed to load app: " + err.message);
+              console.error(err);
+            });
+        }
+
+        function loadRecharts() {
+          setStatus("Loading charts…");
+          loadScript(
+            "https://unpkg.com/recharts@2.10.4/umd/Recharts.min.js",
+            function () {
+              if (window.Recharts) {
+                loadMain();
+              } else {
+                loadFallback();
+              }
+            },
+            loadFallback
+          );
+        }
+
+        function loadFallback() {
+          setStatus("Loading charts (fallback)…");
+          loadScript(
+            "https://cdnjs.cloudflare.com/ajax/libs/recharts/2.10.4/Recharts.min.js",
+            function () {
+              loadMain();
+            }
+          );
+        }
+
+        function loadPropTypes() {
+          setStatus("Loading dependencies…");
+          loadScript(
+            "https://unpkg.com/prop-types@15.8.1/prop-types.min.js",
+            loadRecharts,
+            function () {
+              loadScript(
+                "https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js",
+                loadRecharts
+              );
+            }
+          );
+        }
+
+        loadPropTypes();
+      })();
+    </script>
+  </body>
+</html>
